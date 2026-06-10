@@ -381,7 +381,7 @@ main() {
     done
     
     # Validate setup
-    check_dependencies
+    # check_dependencies (Uncomment if you want to enforce dependency checks)
     validate_pgpass
     
     # Run appropriate mode
