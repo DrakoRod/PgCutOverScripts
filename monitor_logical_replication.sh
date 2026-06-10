@@ -6,10 +6,11 @@
 
 # Configuration
 PGPASS_FILE="$HOME/.pgpass.conf"
-PGUSER="cutover_user"  # Override from pgpass if needed
+PGUSER="your_monitoring_user"  # Override from pgpass if needed
 PGHOST="localhost"
 PGPORT="5432"
 LOG_FILE="/var/log/postgresql/replication_monitor.log"
+ALERT_EMAIL=""  # Set to empty string to disable email alerts
 TEMP_DIR="/tmp/pg_replication_monitor"
 
 # Thresholds (in megabytes and percentages)
@@ -36,9 +37,28 @@ log_message() {
     echo -e "$timestamp [$level] $message" | tee -a "$LOG_FILE"
 }
 
+# Send alert function
+send_alert() {
+    local subject=$1
+    local body=$2
+    
+    if [[ -n "$ALERT_EMAIL" ]]; then
+        echo "$body" | mail -s "$subject" "$ALERT_EMAIL"
+        log_message "INFO" "Alert sent to $ALERT_EMAIL: $subject"
+    fi
+}
+
 # Function to get databases list
 get_databases() {
-    # Dynamically get all databases (uncomment if needed)
+    # You can either hardcode database names or query them
+    # Method 1: Hardcoded list (modify as needed)
+#    cat <<EOF
+#database1
+#database2
+#database3
+#EOF
+    
+    # Method 2: Dynamically get all databases
     PGPASSFILE="$PGPASS_FILE" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres', 'template0', 'template1') ORDER BY datname;"
 }
 
