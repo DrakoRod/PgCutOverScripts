@@ -1,5 +1,14 @@
 # Script to generate the sequences.
 
+
+
+## Installation
+
+```bash
+
+```
+
+
 # To use this script:
 
 1. **Save the script** to a file (e.g., `export_sequences.sh`):

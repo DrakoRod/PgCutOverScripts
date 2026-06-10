@@ -125,7 +125,7 @@ generate_sequence_script() {
             cat >> "$temp_sequences" << EOF
 -- Sequence: ${schemaname}.${sequencename}
 -- Last value: ${last_value} (start: ${start_value}, increment: ${increment_by})
-SELECT setval('${schemaname}.${sequencename}', ${last_value}, true);
+SELECT setval('${schemaname}."${sequencename}"', ${last_value}, true);
 
 EOF
         fi

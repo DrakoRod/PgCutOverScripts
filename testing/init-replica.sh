@@ -30,7 +30,7 @@ for i in $(seq 1 70); do
 EOSQL
     
     # Crear las mismas tablas en replica
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" -d "$DB_NAME" <<-EOSQL
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$DB_NAME" <<-EOSQL
         CREATE TABLE IF NOT EXISTS table1 (
             id SERIAL PRIMARY KEY,
             data TEXT NOT NULL,
@@ -60,7 +60,7 @@ for i in $(seq 1 70); do
     
     echo "Creando suscripción $SUB_NAME para $DB_NAME"
     
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" -d "$DB_NAME" <<-EOSQL
+    psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$DB_NAME" <<-EOSQL
         CREATE SUBSCRIPTION $SUB_NAME
         CONNECTION '$CONN_STRING'
         PUBLICATION ${DB_NAME}_pub
