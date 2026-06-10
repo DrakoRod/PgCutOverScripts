@@ -4,7 +4,7 @@ set -e
 echo "Configuring PostgreSQL Primary..."
 
 # Configurar parámetros de replicación
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+psql -v ON_ERROR_STOP=1 -d postgres -U "$POSTGRES_USER" <<-EOSQL
     ALTER SYSTEM SET wal_level = logical;
     ALTER SYSTEM SET max_worker_processes = 150;
     ALTER SYSTEM SET max_replication_slots = 150;
@@ -13,7 +13,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
     ALTER SYSTEM SET max_sync_workers_per_subscription = 8;
 EOSQL
 
-echo "Reloading PostgreSQL configuration..."
+echo "Restarting PostgreSQL configuration..."
 pg_ctl -D "$PGDATA" -m fast -w restart
 
 # Crear 70 bases de datos
@@ -22,12 +22,12 @@ for i in $(seq 1 70); do
     echo "Creating Database: $DB_NAME"
     
     # Crear base de datos
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+    psql -v ON_ERROR_STOP=1 -d postgres -U "$POSTGRES_USER" <<-EOSQL
         CREATE DATABASE $DB_NAME;
 EOSQL
     
     # Crear tablas en la base de datos
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" -d "$DB_NAME" <<-EOSQL
+    psql -v ON_ERROR_STOP=1 -d "$DB_NAME" -U "$POSTGRES_USER" <<-EOSQL
         -- Tabla 1
         CREATE TABLE IF NOT EXISTS table1 (
             id SERIAL PRIMARY KEY,

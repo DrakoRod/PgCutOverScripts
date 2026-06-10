@@ -49,7 +49,11 @@ To install the monitoring lag script do you need follow the next steps:
 
 ```bash
 # Download to /usr/local/bin
-sudo curl -o /usr/local/bin/monitor_logical_replication.sh https://github.com/DrakoRod/PgCutOverScripts/blob/main/monitor_logical_replication.sh
+# if you want add to PATH 
+sudo curl -o /usr/local/bin/monitor_logical_replication.sh https://raw.githubusercontent.com/DrakoRod/PgCutOverScripts/refs/heads/main/monitor_logical_replication.sh
+
+# for the other directory
+curl -o monitor_logical_replication.sh https://raw.githubusercontent.com/DrakoRod/PgCutOverScripts/refs/heads/main/monitor_logical_replication.sh
 
 # Make it executable
 sudo chmod +x /usr/local/bin/monitor_logical_replication.sh

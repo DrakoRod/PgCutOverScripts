@@ -7,7 +7,7 @@ sleep 10
 echo "Configuring PostgreSQL Replica..."
 
 # Configurar parámetros
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+psql -v ON_ERROR_STOP=1 -d postgres -U "$POSTGRES_USER" <<-EOSQL
     ALTER SYSTEM SET max_worker_processes = 150;
     ALTER SYSTEM SET max_replication_slots = 150;
     ALTER SYSTEM SET max_wal_senders = 150;
@@ -16,7 +16,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
     SELECT pg_reload_conf();
 EOSQL
 
-echo "Reloading PostgreSQL configuration..."
+echo "Restarting PostgreSQL configuration..."
 pg_ctl -D "$PGDATA" -m fast -w restart
 
 # Crear 70 bases de datos en replica
@@ -25,7 +25,7 @@ for i in $(seq 1 70); do
     echo "Creating Database in Replica: $DB_NAME"
     
     # Crear base de datos
-    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+    psql -v ON_ERROR_STOP=1 -d postgres -U "$POSTGRES_USER" <<-EOSQL
         CREATE DATABASE $DB_NAME;
 EOSQL
     
