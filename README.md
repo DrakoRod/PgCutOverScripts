@@ -37,7 +37,7 @@ sudo pacman -S postgresql mailutils
 In the database create the next user to generate the process
 
 ```sql
-CREATE USER rep_monitoring_user IDENTIFIED BY "{superpass}" VALID UNTIL '2026-06-11 17:22:13.799278-06' IN ROLE pg_monitor;
+CREATE USER rep_monitoring_user WITH PASSWORD "{superpass}" VALID UNTIL '2026-06-11 17:22:13.799278-06' IN ROLE pg_monitor;
 ```
 
 
@@ -107,16 +107,16 @@ Update the get_databases() function with your database names:
 ```bash
 get_databases() {
     # Option 1: Hardcode database names
-    cat <<EOF
-customer_db
-orders_db
-inventory_db
-analytics_db
+    #cat <<EOF
+#customer_db
+#orders_db
+#inventory_db
+#analytics_db
 # ... up to 70 databases
-EOF
+#EOF
     
     # Option 2: Query all databases automatically
-    # PGPASSFILE="$PGPASS_FILE" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres', 'template0', 'template1') ORDER BY datname;"
+    PGPASSFILE="$PGPASS_FILE" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres', 'template0', 'template1') ORDER BY datname;"
 }
 ```
 
@@ -302,3 +302,64 @@ send-mail: Cannot open mail:25
 **Solution**:
 - Configure mail transfer agent (postfix, sendmail, etc.)
 - Or disable email alerts by setting `ALERT_EMAIL=""`
+
+
+## Testing process
+
+Enter to directory named testing
+
+```bash
+cd testing/
+
+## Permissions ensure
+chmod +x *.sh
+chmod +x init-primary.sh init-replica.sh monitor.sh test_replication.sh cleanup.sh
+
+docker-compose up -d
+```
+
+
+We can check logs with:
+```bash
+docker-compose logs -f postgres-primary
+docker-compose logs -f postgres-replica
+```
+
+After the create container we need setup the databases and tables in both servers.
+
+```bash
+# For primary:
+docker exec -it postgres-primary /bin/bash
+containerid:/# cd docker-entrypoint-initdb.d/
+containerid:/docker-entrypoint-initdb.d# bash init-primary.sh
+
+# For replica:
+docker exec -it postgres-replica /bin/bash
+containerid:/# cd docker-entrypoint-initdb.d/
+containerid:/docker-entrypoint-initdb.d# bash init-replica.sh
+```
+
+
+Test replication:
+```bash
+# Connect to primary
+docker exec -it postgres-primary psql -U admin
+
+psql -h localhost -p 5444 postgres admin
+
+# Connect to replica
+docker exec -it postgres-replica psql -U admin
+
+psql -h localhost -p 5445 postgres admin
+```
+
+After the finish the containers and tester we need can test the replication process, for that 
+we create the user in the primary with the next code:
+
+```bash
+psql -h localhost -p 5444 -c "CREATE USER rep_monitoring_user WITH PASSWORD '{superpass}' VALID UNTIL '2026-06-11 17:22:13.799278-06' IN ROLE pg_monitor;" postgres admin
+```
+
+```bash
+./monitor_logical_replication.sh --daemon --interval 60
+```

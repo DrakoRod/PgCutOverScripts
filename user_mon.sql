@@ -1,3 +1,0 @@
-
-
-CREATE USER cutover_user IDENTIFIED BY "3aYNK4eMylZKWh8v0nh67NDrD7MuOxfW" VALID UNTIL '10:00:00' IN ROLE pg_monitor;

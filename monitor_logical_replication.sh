@@ -5,11 +5,12 @@
 # Usage: ./monitor_logical_replication.sh [options]
 
 # Configuration
-PGPASS_FILE="$HOME/.pgpass.conf"
-PGUSER="your_monitoring_user"  # Override from pgpass if needed
+# PGPASS_FILE="$HOME/.pgpass" # Path to pgpass file for authentication
+PGPASS_FILE="./_pgpass"  # Override for testing, ensure this file exists with proper credentials
+PGUSER="rep_monitoring_user"  # default user. Ensure this user has appropriate permissions for monitoring, in the readme section 
 PGHOST="localhost"
-PGPORT="5432"
-LOG_FILE="/var/log/postgresql/replication_monitor.log"
+PGPORT="5444"   # Adjust on your primary server
+LOG_FILE="/tmp/replication_monitor.log" # Or use, but check the permissions /var/log/postgresql/replication_monitor.log
 ALERT_EMAIL=""  # Set to empty string to disable email alerts
 TEMP_DIR="/tmp/pg_replication_monitor"
 
@@ -58,8 +59,8 @@ get_databases() {
 #database3
 #EOF
     
-    # Method 2: Dynamically get all databases
-    PGPASSFILE="$PGPASS_FILE" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres', 'template0', 'template1') ORDER BY datname;"
+# Method 2: Dynamically get all databases
+PGPASSFILE="$PGPASS_FILE" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false AND datname NOT IN ('postgres', 'template0', 'template1') ORDER BY datname;"
 }
 
 # Function to check replication slots for a specific database
@@ -71,8 +72,8 @@ check_replication_slots() {
             slot_type,
             database,
             active,
-            pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) as lag_bytes,
-            pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as lag_bytes_raw,
+            pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) as lag_bytes,
+            pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) as lag_bytes_raw,
             confirmed_flush_lsn,
             restart_lsn,
             CASE 
@@ -96,8 +97,8 @@ check_replication_performance() {
     local sql_query=$(cat <<-EOF
         SELECT 
             slot_name,
-            pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) as lag_bytes,
-            pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as lag_bytes_raw,
+            pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn)) as lag_bytes,
+            pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) as lag_bytes_raw,
             extract(epoch from now() - confirmed_flush_lsn_time) as lag_seconds
         FROM pg_replication_slots 
         CROSS JOIN LATERAL (SELECT now() - '2024-01-01' as confirmed_flush_lsn_time) x
@@ -110,7 +111,7 @@ EOF
         WITH lag AS (
             SELECT 
                 slot_name,
-                pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) as lag_bytes,
+                pg_wal_lsn_diff(pg_current_wal_lsn(), confirmed_flush_lsn) as lag_bytes,
                 case 
                     when active then 0
                     else extract(epoch from now() - pg_last_xact_replay_timestamp())
@@ -177,11 +178,13 @@ generate_report() {
             if [[ -z "$dbname" ]]; then
                 continue
             fi
+
+            dbname=$(echo "$dbname" | xargs)
             
             log_message "INFO" "Checking database: $dbname"
             
             # Check connectivity first
-            if ! PGPASSFILE="$PGPASS_FILE" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$dbname" -c "SELECT 1" &>/dev/null; then
+            if ! PGPASSFILE="$PGPASS_FILE" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d"$dbname" -c "SELECT 1" &>/dev/null; then
                 log_message "ERROR" "Cannot connect to database: $dbname"
                 printf "%-20s | %-25s | %-10s | %-15s | %-15s\n" "$dbname" "ERROR" "Failed" "N/A" "Connection failed"
                 ((error_count++))
@@ -230,6 +233,8 @@ generate_report() {
                     log_message "WARNING" "Stale replication slot detected: $slot_name on $dbname (inactive for $inactive_duration)"
                 fi
             done < <(check_stale_slots "$dbname")
+
+            echo ""
             
         done < <(get_databases)
         
