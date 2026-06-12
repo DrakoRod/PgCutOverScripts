@@ -1,2 +1,5 @@
 testing/primary_data/
 testing/replica_data/
+
+PgSetSequences/restore_all_sequences.sql
+PgSetSequences/restore_all_sequences.sql.summary.txt
