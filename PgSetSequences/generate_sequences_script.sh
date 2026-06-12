@@ -139,7 +139,7 @@ EOF
             cat >> "$output_file" << EOF
 -- Sequence: ${schemaname}.${sequencename}
 -- Last value: ${last_value} (start: ${start_value}, increment: ${increment_by})
-SELECT setval('${schemaname}."${sequencename}"', ${last_value}, true);
+SELECT setval('"${schemaname}"."${sequencename}"', ${last_value}, true);
 
 EOF
             sequence_count=$((sequence_count + 1))
